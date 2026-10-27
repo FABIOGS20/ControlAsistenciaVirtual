@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import {
-  Image,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
+
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { colors } from '../styles/colors';
 import { loginSchema } from '../schemas/loginSchema';
-
 import { supabase } from '../services/supabase';
 
 export default function LoginScreen({ navigation }: any) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const [errors, setErrors] = useState<{
     usuario?: string;
     password?: string;
@@ -46,6 +50,7 @@ export default function LoginScreen({ navigation }: any) {
     }
 
     setErrors({});
+    setLoading(true);
 
     try {
       const { data, error } = await supabase
@@ -62,34 +67,37 @@ export default function LoginScreen({ navigation }: any) {
         return;
       }
 
-      console.log('Usuario autenticado:', data);
-
-      navigation.navigate('Home');
+      navigation.replace('Home', {
+        usuario: data,
+      });
     } catch (err) {
-      console.error(err);
-
       setErrors({
         password: 'Error al conectar con el servidor',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../assets/images/Logo.png')}
-        style={styles.logo}
-      />
+    <KeyboardAwareScrollView
+      enableOnAndroid
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.scrollContainer}
+    >
+      <View style={styles.container}>
+        <Image
+          source={require('../assets/images/Logo.png')}
+          style={styles.logo}
+        />
 
-      <Text style={styles.title}>Control de Asistencia</Text>
+        <Text style={styles.title}>Control de Asistencia</Text>
 
-      <Text style={styles.subtitle}>Institución Educativa</Text>
+        <Text style={styles.subtitle}>Sistema de Control de Asistencia</Text>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Usuario</Text>
         <TextInput
           style={[styles.input, errors.usuario && styles.inputError]}
-          placeholder="Ingrese su usuario"
+          placeholder="Correo electrónico"
           value={usuario}
           onChangeText={text => {
             setUsuario(text);
@@ -103,14 +111,17 @@ export default function LoginScreen({ navigation }: any) {
                 : result.error.issues[0].message,
             }));
           }}
+          autoCapitalize="none"
+          editable={!loading}
         />
+
         {errors.usuario && (
           <Text style={styles.errorText}>{errors.usuario}</Text>
         )}
-        <Text style={styles.label}>Contraseña</Text>
+
         <TextInput
           style={[styles.input, errors.password && styles.inputError]}
-          placeholder="Ingrese su contraseña"
+          placeholder="Contraseña"
           secureTextEntry
           value={password}
           onChangeText={text => {
@@ -125,19 +136,38 @@ export default function LoginScreen({ navigation }: any) {
                 : result.error.issues[0].message,
             }));
           }}
+          editable={!loading}
         />
+
         {errors.password && (
           <Text style={styles.errorText}>{errors.password}</Text>
         )}
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Ingresar</Text>
+
+        <TouchableOpacity
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color={colors.white} size="small" />
+
+              <Text style={styles.loginButtonText}> Verificando...</Text>
+            </View>
+          ) : (
+            <Text style={styles.loginButtonText}>Ingresar</Text>
+          )}
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
+
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -146,19 +176,20 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 160,
-    height: 160,
+    width: 180,
+    height: 180,
     resizeMode: 'contain',
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
   },
 
   title: {
     fontSize: 30,
     fontWeight: 'bold',
-    textAlign: 'center',
     color: colors.text,
+    textAlign: 'center',
   },
+
   subtitle: {
     fontSize: 15,
     textAlign: 'center',
@@ -166,31 +197,13 @@ const styles = StyleSheet.create({
     marginBottom: 35,
   },
 
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    marginTop: -5,
-    marginBottom: 10,
-    marginLeft: 5,
-  },
-
-  form: {
-    gap: 10,
-  },
-
-  label: {
-    fontSize: 15,
-    color: '#334155',
-    fontWeight: '600',
-  },
-
   input: {
-    backgroundColor: 'white',
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginBottom: 10,
   },
 
@@ -199,17 +212,36 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
 
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 15,
-    borderRadius: 12,
-    marginTop: 15,
+  errorText: {
+    color: colors.danger,
+    fontSize: 12,
+    marginBottom: 10,
+    marginLeft: 5,
   },
 
-  buttonText: {
+  loginButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    marginTop: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  loginButtonDisabled: {
+    opacity: 0.8,
+  },
+
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  loginButtonText: {
     color: colors.white,
     textAlign: 'center',
-    fontSize: 18,
     fontWeight: 'bold',
+    fontSize: 18,
   },
 });
