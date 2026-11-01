@@ -13,7 +13,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 import { colors } from '../styles/colors';
 import { loginSchema } from '../schemas/loginSchema';
-import { supabase } from '../services/supabase';
+
+import { login } from '../services/authService';
 
 export default function LoginScreen({ navigation }: any) {
   const [usuario, setUsuario] = useState('');
@@ -53,12 +54,7 @@ export default function LoginScreen({ navigation }: any) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from('usuario')
-        .select('*')
-        .eq('correo', usuario)
-        .eq('password', password)
-        .single();
+      const { data, error } = await login(usuario, password);
 
       if (error || !data) {
         setErrors({
