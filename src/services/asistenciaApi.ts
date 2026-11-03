@@ -7,19 +7,34 @@ export async function marcarAsistenciaQr(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'ngrok-skip-browser-warning': 'true',
       },
       body: JSON.stringify({
-        codigo_qr: "DOC003",
+        codigo_qr: codigoQr,
         dispositivo_id: 1,
       }),
     },
   );
 
-  const data = await response.json();
+  const texto = await response.text();
+
+  console.log('STATUS:', response.status);
+  console.log('RESPUESTA:', texto);
+
+  let data: any;
+
+  try {
+    data = JSON.parse(texto);
+  } catch {
+    throw new Error(
+      `Respuesta inválida del servidor: ${texto}`,
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(data?.detail || 'Error al registrar asistencia');
+    throw new Error(
+      data.detail || 'Error al registrar asistencia',
+    );
   }
 
   return data;
